@@ -27,6 +27,11 @@ export const quickEmoji = (provider: EmojiProvider) => {
                     picker.hide();
                     resolve(picker.selectedItems[0]);
                 });
+                picker.onDidChangeValue(() => {
+                    // Prune space related from input (not sure how to just ignore) 👾
+                    const noSpace = picker.value.replace(/\s+/g, '');
+                    if (noSpace !== picker.value) picker.value = noSpace;
+                });
                 picker.onDidHide(() => {
                     picker.dispose();
                     resolve(undefined);
