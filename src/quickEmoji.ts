@@ -5,7 +5,13 @@ export type EmojiDestination = 'terminal' | 'editor';
 
 export const quickEmoji = (provider: EmojiProvider) => {
     const items: QuickPickItem[] = provider.emojis.map((emoji) => {
-        return ({ description: emoji.name, label: emoji.emoji });
+        return ({ description: emoji.description, label: `${emoji.emoji}\t${emoji.name}`});
+        /* TODO:
+        - see usage of details: (details? emoji.description)
+        - see if use kind
+        - ! SPACE SUPPORT!
+        link doc:  https://code.visualstudio.com/api/references/vscode-api#QuickPick&lt;T&gt;
+        */
     });
 
     return (property: keyof Emoji, destination: EmojiDestination) => {
@@ -14,7 +20,7 @@ export const quickEmoji = (provider: EmojiProvider) => {
             const emoji: QuickPickItem | undefined = await new Promise<QuickPickItem | undefined>((resolve) => {
                 const picker = window.createQuickPick<QuickPickItem>();
                 picker.items = items;
-                picker.matchOnDescription = true;
+                picker.matchOnDescription = true; // ! FIXME: make it an option! + option to show or not the description
                 picker.placeholder = 'Your Emoji Code';
                 picker.title = property === 'emoji' ? 'Emoji Picker' : 'Emoji Code Picker';
                 picker.onDidAccept(() => {
