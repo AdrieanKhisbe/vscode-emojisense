@@ -15,10 +15,22 @@ Inspired by the [Atom autocomplete+ emojis suggestions plugin][atom].
     - Mac: <kbd>cmd</kbd> + <kbd>i</kbd>
     - Linux: <kbd>ctrl</kbd> + <kbd>alt</kbd> + <kbd>i</kbd>
     - Windows: <kbd>ctrl</kbd> + <kbd>i</kbd>
+- While the picker is open, use its insertion-mode button to switch between emoji and `:shortcode:` output, or press Shift+Cmd+I on macOS, Shift+Ctrl+Alt+I on Linux, or Shift+Ctrl+I on Windows. The title shows the current mode. Switching preserves your search and selection, and each opening starts in the mode of the command you used.
+- Copy the highlighted item using Cmd+C on macOS or Ctrl+C on Windows/Linux, or click an item's copy button to copy that item. This copies emoji or `:shortcode:` according to the current insertion mode, keeps the picker open, and leaves insertion history unchanged. In this picker, the shortcut copies the highlighted item rather than selected search text.
+- Successful copying briefly changes that item's copy icon to a checkmark, with a tooltip showing what was copied. The copy icon returns after one second. Clipboard failures show a warning so you can retry.
+- The emoji and shortcode pickers share the last 200 successfully inserted shortcodes, most recent first, across editors, terminals, and workspaces. History persists across restarts in the current VS Code profile. Exact and prefix preferences take priority while searching; clearing the search restores recent history order. A history storage failure does not interrupt insertion.
 
 [List of supported emoji][cheat]
 
 ## General Configuration
+
+- `emojisense.picker.ignoreSpaces`: Remove literal space characters from input as you type in either picker (for example, `s mile` becomes `smile`). Enabled by default. VS Code's native filtering searches the resulting text. Tabs and other whitespace characters are preserved. Set this to `false` to keep spaces in your queries, including description phrases.
+
+- `emojisense.picker.searchDescriptions`: Show and search human-readable descriptions in both pickers (for example, `grinning face with smiling eyes`). Enabled by default. Displayed descriptions retain their spaces. Set this to `false` to hide descriptions and search emoji and shortcodes only. Use the description toggle in an open picker to show or hide descriptions and toggle description matching immediately; this affects only that picker, and the setting controls the default for the next opening.
+
+- `emojisense.picker.preferExactMatch`: Rank exact shortcode matches first and automatically focus them in the emoji picker, so Enter selects them. Enabled by default. Names are matched without case sensitivity, with or without surrounding colons (for example, `smile` or `:smile:`). Other fuzzy matches remain available, and you can use the arrow keys to select another result.
+
+- `emojisense.picker.preferPrefixMatch`: Rank shortcode prefixes ahead of other fuzzy matches. Enabled by default. For example, `smile` ranks the single exact match `smile` first, then `smile_cat`, then fuzzy matches such as `sweat_smile`. Set both match preferences to `false` to disable prioritization. Set `ignoreSpaces` to `false` too to avoid a custom input handler. Shared recent history still appears first.
 
 - `emojisense.unicodeCompletionsEnabled`: Enable completions that insert emoji as unicode, i.e. `:smile_cat:` -> 😸
 
@@ -65,6 +77,10 @@ You can enable emojisense for all languages using `*`:
     "*scminput*": true
 }
 ```
+
+## Development
+
+Run `npm ci`, then `npm test` to run the picker regression tests. The tests exercise the TypeScript implementation with mocked VS Code APIs, covering exact and prefix preferences, candidate retention, and editor/terminal insertion. Native VS Code filtering and rendering require a separate extension-host check.
 
 ## Credits
 
