@@ -1,4 +1,4 @@
-import { commands, Disposable, env, Memento, QuickPickItem, ThemeIcon, Uri, version, window, workspace } from 'vscode';
+import { commands, Disposable, env, Memento, QuickPickItem, ThemeIcon, window, workspace } from 'vscode';
 import { Emoji, EmojiProvider } from './emoji';
 import { createEmojiIconProvider } from './pickerIcons';
 import { matchesPickerQuery } from './pickerMatching';
@@ -8,8 +8,6 @@ type DescriptionDisplay = 'no' | 'description' | 'detail';
 
 interface EmojiQuickPickItem extends QuickPickItem {
     readonly emoji: Emoji;
-    // Stable since VS Code 1.81. Older hosts use the original text-only layout.
-    readonly iconPath?: Uri;
 }
 
 const historyKey = 'picker.history';
@@ -20,11 +18,9 @@ const descriptionFor = (emoji: Emoji) => emoji.tags.length
     : emoji.description;
 
 export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
-    const [major, minor] = version.split('.').map(Number);
-    const useEmojiIcons = major > 1 || major === 1 && minor >= 81;
     const iconFor = createEmojiIconProvider();
     const items: EmojiQuickPickItem[] = provider.emojis.map((emoji) => {
-        return ({ description: emoji.name, label: emoji.emoji, emoji });
+        return ({ label: emoji.name, emoji });
     });
     const itemsByName = new Map(items.map(item => [item.emoji.name, item]));
 
@@ -57,8 +53,7 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
             const ignoreSpaces = config.get<boolean>('picker.ignoreSpaces', true);
             const shortcodeFor = (emoji: Emoji) => preferExactMatch || preferPrefixMatch ? `:${emoji.name}:` : emoji.name;
             const itemDescriptionFor = (emoji: Emoji) => descriptionDisplay === 'description'
-                ? `${useEmojiIcons ? '' : `${shortcodeFor(emoji)} `}· ${descriptionFor(emoji)}`
-                : useEmojiIcons ? undefined : shortcodeFor(emoji);
+                ? `· ${descriptionFor(emoji)}` : undefined;
             const recent = new Set(recentItems());
             const orderedItems = recent.size
                 ? [...recent, ...items.filter(item => !recent.has(item))]
@@ -72,8 +67,8 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                     const copy = { iconPath: new ThemeIcon('copy'), tooltip: 'Copy in current insertion mode' };
                     const rankedItems: EmojiQuickPickItem[] = orderedItems.map(item => ({
                         ...item,
-                        label: useEmojiIcons ? shortcodeFor(item.emoji) : item.label,
-                        iconPath: useEmojiIcons ? iconFor(item.emoji.emoji) : undefined,
+                        label: shortcodeFor(item.emoji),
+                        iconPath: iconFor(item.emoji.emoji),
                         description: itemDescriptionFor(item.emoji),
                         detail: descriptionDisplay === 'detail' ? descriptionFor(item.emoji) : undefined,
                         buttons: [copy],
@@ -108,9 +103,8 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         const combined = tags.length > 0 && (query.trim().length > 0 || tags.length > 1);
                         // Images aren't searchable. Retain pasted emoji and keycap searches
                         // alongside hidden description and space-insensitive matching.
-                        const glyphQuery = useEmojiIcons && query.length > 0 && !/[a-z]/i.test(query);
-                        const customSearch = descriptionDisplay === 'no' && searchDescriptions
-                            || !useEmojiIcons && descriptionDisplay === 'description' && !searchDescriptions;
+                        const glyphQuery = query.length > 0 && !/[a-z]/i.test(query);
+                        const customSearch = descriptionDisplay === 'no' && searchDescriptions;
                         let changed = false;
                         for (const item of rankedItems) {
                             const fields = [item.emoji.emoji, shortcodeFor(item.emoji),
@@ -134,9 +128,7 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                     const useShortcode = { iconPath: new ThemeIcon('symbol-key'), tooltip: 'Insert :shortcode: instead (Tab)' };
                     const useEmoji = { iconPath: new ThemeIcon('smiley'), tooltip: 'Insert emoji instead (Tab)' };
                     const updateControls = () => {
-                        picker.matchOnDescription = useEmojiIcons
-                            ? descriptionDisplay === 'description' && searchDescriptions
-                            : descriptionDisplay !== 'description' || searchDescriptions;
+                        picker.matchOnDescription = descriptionDisplay === 'description' && searchDescriptions;
                         picker.matchOnDetail = descriptionDisplay === 'detail' && searchDescriptions;
                         const nextDisplay = descriptionDisplay === 'no' ? 'description' : descriptionDisplay === 'description' ? 'detail' : 'no';
                         cycleDescriptionDisplay.tooltip = `Description display: ${descriptionDisplay}. Switch to ${nextDisplay} (Shift+Tab)`;
