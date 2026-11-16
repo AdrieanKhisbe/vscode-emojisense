@@ -11,7 +11,7 @@ interface EmojiQuickPickItem extends QuickPickItem {
 const historyKey = 'picker.history';
 const historyLimit = 200;
 
-const detailFor = (emoji: Emoji) => emoji.tags.length
+const descriptionFor = (emoji: Emoji) => emoji.tags.length
     ? `${emoji.description} · ${emoji.tags.map(tag => `#${tag}`).join(' ')}`
     : emoji.description;
 
@@ -47,6 +47,9 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
             const preferPrefixMatch = config.get<boolean>('picker.preferPrefixMatch', true);
             let searchDescriptions = config.get<boolean>('picker.searchDescriptions', true);
             const ignoreSpaces = config.get<boolean>('picker.ignoreSpaces', true);
+            const shortcodeFor = (emoji: Emoji) => preferExactMatch || preferPrefixMatch ? `:${emoji.name}:` : emoji.name;
+            const itemDescriptionFor = (emoji: Emoji) => searchDescriptions
+                ? `${shortcodeFor(emoji)} ${descriptionFor(emoji)}` : shortcodeFor(emoji);
             const recent = new Set(recentItems());
             const orderedItems = recent.size
                 ? [...recent, ...items.filter(item => !recent.has(item))]
@@ -60,8 +63,7 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                     const copy = { iconPath: new ThemeIcon('copy'), tooltip: 'Copy in current insertion mode' };
                     const rankedItems: EmojiQuickPickItem[] = orderedItems.map(item => ({
                         ...item,
-                        description: preferExactMatch || preferPrefixMatch ? `:${item.emoji.name}:` : item.description,
-                        detail: searchDescriptions ? detailFor(item.emoji) : undefined,
+                        description: itemDescriptionFor(item.emoji),
                         buttons: [copy],
                     }));
                     picker.items = rankedItems;
@@ -94,7 +96,8 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         const combined = tags.length > 0 && (query.trim().length > 0 || tags.length > 1);
                         let changed = false;
                         for (const item of rankedItems) {
-                            const fields = [item.label, item.description || '', item.detail || ''];
+                            const fields = [item.emoji.emoji, shortcodeFor(item.emoji),
+                                searchDescriptions ? descriptionFor(item.emoji) : ''];
                             const alwaysShow = combined
                                 ? matchesTags(item, tags)
                                     && fields.some(text => matchesPickerQuery(query, text))
@@ -107,7 +110,7 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         return changed;
                     };
                     picker.matchOnDescription = true;
-                    picker.matchOnDetail = searchDescriptions;
+                    picker.matchOnDetail = false;
                     picker.placeholder = 'Your Emoji Code';
                     const showDescriptions = { iconPath: new ThemeIcon('list-selection'), tooltip: 'Show descriptions' };
                     const hideDescriptions = { iconPath: new ThemeIcon('list-selection'), tooltip: 'Hide descriptions' };
@@ -168,10 +171,9 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         }
                         searchDescriptions = !searchDescriptions;
                         for (const item of rankedItems) {
-                            item.detail = searchDescriptions ? detailFor(item.emoji) : undefined;
+                            item.description = itemDescriptionFor(item.emoji);
                         }
                         const activeItems = picker.activeItems;
-                        picker.matchOnDetail = searchDescriptions;
                         updateExtraMatches();
                         picker.items = displayedItems;
                         picker.activeItems = activeItems;
