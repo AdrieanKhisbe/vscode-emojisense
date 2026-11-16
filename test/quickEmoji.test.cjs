@@ -33,7 +33,8 @@ function createHistoryState(initial = []) {
     };
 }
 
-function openPicker({ settings = {}, property = 'emoji', destination = 'editor', dataset = emojis, historyState = createHistoryState(), showError } = {}) {
+// Baseline regressions use the minimum supported host; SVG cases opt into newer versions.
+function openPicker({ settings = {}, property = 'emoji', destination = 'editor', dataset = emojis, historyState = createHistoryState(), showError, vscodeVersion = '1.75.0' } = {}) {
     let onChange;
     let onAccept;
     let onHide;
@@ -93,6 +94,8 @@ function openPicker({ settings = {}, property = 'emoji', destination = 'editor',
         dispose() { disposed = true; },
     };
     const api = {
+        version: vscodeVersion,
+        Uri: { parse: value => ({ toString: () => value }) },
         ThemeIcon: class { constructor(id) { this.id = id; } },
         env: { clipboard: { writeText: async text => { clipboardWrites.push(text); } } },
         workspace: {
@@ -132,6 +135,13 @@ function openPicker({ settings = {}, property = 'emoji', destination = 'editor',
     const exports = {};
     new Function('require', 'exports', 'console', 'setTimeout', 'clearTimeout', code)(name => {
         if (name === './pickerMatching') return matching;
+        if (name === './pickerIcons') {
+            const icons = {};
+            new Function('require', 'exports', ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/pickerIcons.ts'), 'utf8'), {
+                compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2018 },
+            }).outputText)(() => api, icons);
+            return icons;
+        }
         assert.equal(name, 'vscode');
         return api;
     }, exports, { warn: (...args) => warnings.push(args) }, (callback, delay) => {
@@ -438,7 +448,7 @@ for (const property of ['emoji', 'name']) {
                 assert.equal(session.contexts.get('emojisense.pickerOpen'), true);
                 assert.equal(session.picker.title, property === 'emoji' ? '😃 Emoji Picker' : ':smiley: Emoji Code Picker');
                 assert.equal(session.picker.buttons[2].tooltip,
-                    property === 'emoji' ? 'Insert :shortcode: instead' : 'Insert emoji instead');
+                    property === 'emoji' ? 'Insert :shortcode: instead (Tab)' : 'Insert emoji instead (Tab)');
                 if (via === 'button') {
                     session.toggleInsertionMode();
                 } else {
@@ -446,7 +456,7 @@ for (const property of ['emoji', 'name']) {
                 }
                 assert.equal(session.picker.title, property === 'emoji' ? ':smiley: Emoji Code Picker' : '😃 Emoji Picker');
                 assert.equal(session.picker.buttons[2].tooltip,
-                    property === 'emoji' ? 'Insert emoji instead' : 'Insert :shortcode: instead');
+                    property === 'emoji' ? 'Insert emoji instead (Tab)' : 'Insert :shortcode: instead (Tab)');
                 assert.equal(session.picker.value, 'smile');
                 assert.equal(session.picker.activeItems[0], active);
                 assert.deepEqual(session.names, order);
@@ -959,7 +969,7 @@ test('all real emoji aliases remain unique and available across ranking transiti
 });
 
 // Model the native filtering boundary as well as extension-supplied matches.
-// Rendering and real key dispatch are checked separately in the development host.
+// This does not model native sorting. Rendering and real key dispatch are checked in the host.
 function visibleNames(session) {
     return session.picker.items.filter(item => item.alwaysShow || [
         item.label,
@@ -1113,5 +1123,122 @@ for (const display of ['no', 'description', 'detail']) {
         session.change('smile');
         assert.deepEqual(visibleNames(session), ['smiley', 'smile']);
         assert.equal(session.picker.value, 'smile');
+    });
+}
+
+for (const vscodeVersion of ['1.80.2', '1.81.0', '1.145.0', '2.0.0']) {
+    test(`SVG icons respect the stable API boundary on VS Code ${vscodeVersion}`, async t => {
+        const session = openPicker({ vscodeVersion });
+        t.after(() => session.cancel());
+        const item = session.picker.items[0];
+        if (vscodeVersion === '1.80.2') {
+            assert.equal(item.iconPath, undefined);
+            assert.equal(item.label, '😅');
+            assert.equal(item.description, ':sweat_smile: · grinning face with sweat');
+        } else {
+            assert(item.iconPath.toString().startsWith('data:image/svg+xml,'));
+            assert.equal(item.label, ':sweat_smile:');
+            assert.equal(item.description, '· grinning face with sweat');
+        }
+    });
+}
+
+for (const display of ['no', 'description', 'detail']) {
+    for (const search of [false, true]) {
+        test(`SVG layout display=${display}, search=${search} preserves matching and exact focus`, async t => {
+            const session = openPicker({ vscodeVersion: '1.145.0', dataset: descriptionDataset, settings: {
+                'picker.description.display': display, 'picker.description.search': search,
+            } });
+            t.after(() => session.cancel());
+            const item = session.picker.items.find(item => item.emoji.name === 'smiley');
+            assert.equal(item.label, ':smiley:');
+            assert.equal(item.description, display === 'description' ? '· grinning face with big eyes · #happy #joy' : undefined);
+            assert.equal(item.detail, display === 'detail' ? 'grinning face with big eyes · #happy #joy' : undefined);
+            assert(item.iconPath);
+            for (const query of ['grinning', '#happy', '#happy face', 'face #happy']) {
+                session.change(query);
+                assert.deepEqual(visibleNames(session), search ? ['smiley', 'smile'] : [], query);
+            }
+            for (const query of ['smile', ':smile:', 's mile']) {
+                session.change(query);
+                assert.equal(session.picker.activeItems[0].emoji.name, 'smile');
+                assert.equal(session.names.filter(name => name === 'smile').length, 1);
+                assert(visibleNames(session).includes('smile'));
+                if (query !== ':smile:') assert(visibleNames(session).includes('smiley'));
+            }
+            session.change('😃');
+            assert.deepEqual(visibleNames(session), ['smiley']);
+            assert.equal(session.picker.value, '😃');
+        });
+    }
+}
+
+for (const property of ['emoji', 'name']) {
+    for (const destination of ['editor', 'terminal']) {
+        test(`SVG layout preserves ${property} copy/insertion in ${destination} and both controls`, async () => {
+            const session = openPicker({ property, destination, vscodeVersion: '1.145.0' });
+            session.change('smile');
+            session.select('smile_cat');
+            const active = session.picker.activeItems[0];
+            const icon = active.iconPath;
+            for (let i = 0; i < 3; i++) session.toggleDescriptions();
+            session.toggleSearch();
+            assert.equal(active.iconPath, icon);
+            assert.equal(session.picker.activeItems[0], active);
+            assert.equal(session.picker.value, 'smile');
+            await session.copySelection();
+            const expected = property === 'emoji' ? '😸' : ':smile_cat:';
+            assert.deepEqual(session.clipboardWrites, [expected]);
+            await session.accept();
+            assert.deepEqual(session.insertions, destination === 'editor' ? [expected] : []);
+            assert.deepEqual(session.terminalWrites, destination === 'terminal' ? [{ text: expected, addNewLine: false }] : []);
+            assert.deepEqual(session.historyState.names, ['smile_cat']);
+        });
+    }
+}
+
+test('SVG aliases share an icon and pasted keycaps remain searchable', async t => {
+    const session = openPicker({ vscodeVersion: '1.145.0', dataset: [
+        { name: '+1', emoji: '👍', description: 'thumbs up' },
+        { name: 'thumbsup', emoji: '👍', description: 'thumbs up' },
+        { name: 'one', emoji: '1️⃣', description: 'keycap one' },
+    ] });
+    t.after(() => session.cancel());
+    assert.equal(session.picker.items[0].iconPath, session.picker.items[1].iconPath);
+    session.change('👍');
+    assert.deepEqual(visibleNames(session), ['+1', 'thumbsup']);
+    session.change('1️⃣');
+    assert.deepEqual(visibleNames(session), ['one']);
+    session.change('1');
+    assert(visibleNames(session).includes('one'));
+});
+
+test('Tab switches insertion mode only from the picker search input', () => {
+    const { contributes } = require('../package.json');
+    const binding = contributes.keybindings.find(binding => binding.key === 'tab');
+    assert.equal(binding.command, 'emojisense.togglePickerInsertionMode');
+    assert.equal(binding.when, "emojisense.pickerOpen && inQuickInput && quickInputType == 'quickPick' && inputFocus");
+    assert.equal(contributes.keybindings.filter(binding => binding.key === 'tab').length, 1);
+});
+
+for (const vscodeVersion of ['1.75.0', '1.145.0']) {
+    test(`picker-mode command retains query, selection and SVG layout on ${vscodeVersion}`, async () => {
+        const session = openPicker({ vscodeVersion });
+        session.change('smile');
+        session.select('smile_cat');
+        const active = session.picker.activeItems[0];
+        const { label, iconPath, description, detail } = active;
+        await session.api.commands.executeCommand('emojisense.togglePickerInsertionMode');
+        assert.equal(session.picker.value, 'smile');
+        assert.equal(session.picker.activeItems[0], active);
+        assert.deepEqual({ label: active.label, iconPath: active.iconPath, description: active.description, detail: active.detail }, { label, iconPath, description, detail });
+        assert.equal(session.picker.title, ':smiley: Emoji Code Picker');
+        assert.equal(session.picker.buttons[2].tooltip, 'Insert emoji instead (Tab)');
+        assert(session.picker.buttons[0].tooltip.includes('Shift+Tab'));
+        assert(session.picker.buttons[1].tooltip.includes('Cmd/Ctrl+Shift+D'));
+        await session.copySelection();
+        assert.deepEqual(session.clipboardWrites, [':smile_cat:']);
+        await session.accept();
+        assert.deepEqual(session.insertions, [':smile_cat:']);
     });
 }
