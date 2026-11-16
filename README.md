@@ -20,7 +20,7 @@ Inspired by the [Atom autocomplete+ emojis suggestions plugin][atom].
     - Windows: <kbd>ctrl</kbd> + <kbd>i</kbd>
   - To access the **emoji-code picker** and insert `:emoji:` markup in the editor or terminal, run the `Emojisense: Pick an :emoji:` command, or use the default keybindings:
     - Mac: <kbd>shift</kbd> + <kbd>cmd</kbd> + <kbd>i</kbd>
-    - Linux: <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>i</kbd> in the editor; add <kbd>alt</kbd> in the terminal
+    - Linux: <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>alt</kbd> + <kbd>i</kbd>
     - Windows: <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>i</kbd>
   - :currency_exchange: Switch emoji / `:shortcode:` insertion with <kbd>Tab</kbd> or the insertion-mode button.
   - :control_knobs: Cycle description display with <kbd>Shift</kbd> + <kbd>Tab</kbd> or the display button.
