@@ -140,12 +140,14 @@
       {
         "mac": "cmd+i",
         "key": "ctrl+i",
+        "linux": "ctrl+alt+i",
         "command": "emojisense.quickEmoji",
         "when": "editorTextFocus"
       },
       {
         "mac": "shift+cmd+i",
         "key": "shift+ctrl+i",
+        "linux": "shift+ctrl+alt+i",
         "command": "emojisense.quickEmojitext",
         "when": "editorTextFocus"
       },
