@@ -3,6 +3,7 @@ import { Emoji, EmojiProvider } from './emoji';
 import { matchesPickerQuery } from './pickerMatching';
 
 export type EmojiDestination = 'terminal' | 'editor';
+type DescriptionDisplay = 'no' | 'description' | 'detail';
 
 interface EmojiQuickPickItem extends QuickPickItem {
     readonly emoji: Emoji;
@@ -45,11 +46,12 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
             const config = workspace.getConfiguration('emojisense', window.activeTextEditor?.document.uri);
             const preferExactMatch = config.get<boolean>('picker.preferExactMatch', true);
             const preferPrefixMatch = config.get<boolean>('picker.preferPrefixMatch', true);
-            let searchDescriptions = config.get<boolean>('picker.searchDescriptions', true);
+            let searchDescriptions = config.get<boolean>('picker.description.search', true);
+            let descriptionDisplay = config.get<DescriptionDisplay>('picker.description.display', 'description');
             const ignoreSpaces = config.get<boolean>('picker.ignoreSpaces', true);
             const shortcodeFor = (emoji: Emoji) => preferExactMatch || preferPrefixMatch ? `:${emoji.name}:` : emoji.name;
-            const itemDescriptionFor = (emoji: Emoji) => searchDescriptions
-                ? `${shortcodeFor(emoji)} ${descriptionFor(emoji)}` : shortcodeFor(emoji);
+            const itemDescriptionFor = (emoji: Emoji) => descriptionDisplay === 'description'
+                ? `${shortcodeFor(emoji)} · ${descriptionFor(emoji)}` : shortcodeFor(emoji);
             const recent = new Set(recentItems());
             const orderedItems = recent.size
                 ? [...recent, ...items.filter(item => !recent.has(item))]
@@ -64,6 +66,7 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                     const rankedItems: EmojiQuickPickItem[] = orderedItems.map(item => ({
                         ...item,
                         description: itemDescriptionFor(item.emoji),
+                        detail: descriptionDisplay === 'detail' ? descriptionFor(item.emoji) : undefined,
                         buttons: [copy],
                     }));
                     picker.items = rankedItems;
@@ -94,14 +97,18 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         const needsFallback = ignoreSpaces && normalized !== value;
                         const { tags, text: query } = queryParts(value);
                         const combined = tags.length > 0 && (query.trim().length > 0 || tags.length > 1);
+                        // Native filtering only sees displayed fields. Supply semantic matches
+                        // when searchable text is hidden or shares a field with excluded text.
+                        const customSearch = descriptionDisplay === 'no' && searchDescriptions
+                            || descriptionDisplay === 'description' && !searchDescriptions;
                         let changed = false;
                         for (const item of rankedItems) {
                             const fields = [item.emoji.emoji, shortcodeFor(item.emoji),
                                 searchDescriptions ? descriptionFor(item.emoji) : ''];
-                            const alwaysShow = combined
+                            const alwaysShow = combined || customSearch && tags.length > 0
                                 ? matchesTags(item, tags)
                                     && fields.some(text => matchesPickerQuery(query, text))
-                                : needsFallback && fields.some(text => matchesPickerQuery(normalized, text));
+                                : (needsFallback || customSearch) && fields.some(text => matchesPickerQuery(query, text));
                             if (!!item.alwaysShow !== alwaysShow) {
                                 item.alwaysShow = alwaysShow;
                                 changed = true;
@@ -109,17 +116,21 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         }
                         return changed;
                     };
-                    picker.matchOnDescription = true;
-                    picker.matchOnDetail = false;
                     picker.placeholder = 'Your Emoji Code';
-                    const showDescriptions = { iconPath: new ThemeIcon('list-selection'), tooltip: 'Show descriptions' };
-                    const hideDescriptions = { iconPath: new ThemeIcon('list-selection'), tooltip: 'Hide descriptions' };
+                    const cycleDescriptionDisplay = { iconPath: new ThemeIcon('list-selection'), tooltip: '' };
+                    const toggleDescriptionSearch = { iconPath: new ThemeIcon('book'), tooltip: '' };
                     const useShortcode = { iconPath: new ThemeIcon('symbol-key'), tooltip: 'Insert :shortcode: instead' };
                     const useEmoji = { iconPath: new ThemeIcon('smiley'), tooltip: 'Insert emoji instead' };
                     const updateControls = () => {
+                        picker.matchOnDescription = descriptionDisplay !== 'description' || searchDescriptions;
+                        picker.matchOnDetail = descriptionDisplay === 'detail' && searchDescriptions;
+                        const nextDisplay = descriptionDisplay === 'no' ? 'description' : descriptionDisplay === 'description' ? 'detail' : 'no';
+                        cycleDescriptionDisplay.tooltip = `Description display: ${descriptionDisplay}. Switch to ${nextDisplay} (Shift+Tab)`;
+                        toggleDescriptionSearch.tooltip = `Description and tag search: ${searchDescriptions ? 'on' : 'off'}. Click to ${searchDescriptions ? 'disable' : 'enable'}`;
                         picker.title = insertionProperty === 'emoji' ? '😃 Emoji Picker' : ':smiley: Emoji Code Picker';
                         picker.buttons = [
-                            searchDescriptions ? hideDescriptions : showDescriptions,
+                            cycleDescriptionDisplay,
+                            toggleDescriptionSearch,
                             insertionProperty === 'emoji' ? useShortcode : useEmoji,
                         ];
                     };
@@ -166,20 +177,13 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                             toggleInsertionMode();
                             return;
                         }
-                        if (button !== showDescriptions && button !== hideDescriptions) {
-                            return;
+                        if (button === cycleDescriptionDisplay) {
+                            cycleDisplay();
+                        } else if (button === toggleDescriptionSearch) {
+                            toggleSearch();
                         }
-                        searchDescriptions = !searchDescriptions;
-                        for (const item of rankedItems) {
-                            item.description = itemDescriptionFor(item.emoji);
-                        }
-                        const activeItems = picker.activeItems;
-                        updateExtraMatches();
-                        picker.items = displayedItems;
-                        picker.activeItems = activeItems;
-                        updateControls();
                     }));
-                    disposables.push(picker.onDidChangeValue(value => {
+                    const updateResults = (value: string) => {
                         const { tags, text: query } = queryParts(value);
                         const extraMatchesChanged = updateExtraMatches();
                         if (!preferExactMatch && !preferPrefixMatch) {
@@ -218,7 +222,36 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         if (bestMatch) {
                             picker.activeItems = [bestMatch];
                         }
-                    }));
+                    };
+                    const updateDescriptionControls = () => {
+                        const activeItems = picker.activeItems;
+                        for (const item of rankedItems) {
+                            item.description = itemDescriptionFor(item.emoji);
+                            item.detail = descriptionDisplay === 'detail' ? descriptionFor(item.emoji) : undefined;
+                        }
+                        updateControls();
+                        updateResults(picker.value);
+                        // Refresh changed text even if result ordering did not change.
+                        picker.items = displayedItems;
+                        const { tags, text } = queryParts(picker.value);
+                        const eligible = activeItems.filter(item => matchesTags(item, tags)
+                            && [item.emoji.emoji, shortcodeFor(item.emoji), searchDescriptions ? descriptionFor(item.emoji) : '']
+                                .some(field => matchesPickerQuery(text, field)));
+                        if (eligible.length) {
+                            picker.activeItems = eligible;
+                        }
+                    };
+                    const cycleDisplay = () => {
+                        descriptionDisplay = descriptionDisplay === 'no' ? 'description' : descriptionDisplay === 'description' ? 'detail' : 'no';
+                        updateDescriptionControls();
+                    };
+                    const toggleSearch = () => {
+                        searchDescriptions = !searchDescriptions;
+                        updateDescriptionControls();
+                    };
+                    disposables.push(commands.registerCommand('emojisense.cyclePickerDescriptionDisplay', cycleDisplay));
+                    disposables.push(commands.registerCommand('emojisense.togglePickerDescriptionSearch', toggleSearch));
+                    disposables.push(picker.onDidChangeValue(updateResults));
                     disposables.push(picker.onDidAccept(() => {
                         resolve(picker.selectedItems[0]);
                         picker.hide();

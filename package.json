@@ -67,6 +67,18 @@
         "command": "emojisense.quickEmojitextTerminal",
         "title": "Pick an :emoji: and insert in terminal",
         "category": "Emojisense"
+      },
+      {
+        "command": "emojisense.cyclePickerDescriptionDisplay",
+        "title": "Cycle description display",
+        "category": "Emojisense",
+        "enablement": "emojisense.pickerOpen"
+      },
+      {
+        "command": "emojisense.togglePickerDescriptionSearch",
+        "title": "Toggle description and tag search",
+        "category": "Emojisense",
+        "enablement": "emojisense.pickerOpen"
       }
     ],
     "menus": {
@@ -86,6 +98,14 @@
         {
           "command": "emojisense.quickEmojitextTerminal",
           "when": "panelFocus && activeViewlet == 'workbench.panel.terminal'"
+        },
+        {
+          "command": "emojisense.cyclePickerDescriptionDisplay",
+          "when": "false"
+        },
+        {
+          "command": "emojisense.togglePickerDescriptionSearch",
+          "when": "false"
         }
       ]
     },
@@ -128,6 +148,17 @@
         "key": "shift+ctrl+i",
         "command": "emojisense.quickEmojitext",
         "when": "editorTextFocus"
+      },
+      {
+        "key": "shift+tab",
+        "command": "emojisense.cyclePickerDescriptionDisplay",
+        "when": "emojisense.pickerOpen && inQuickInput && quickInputType == 'quickPick' && inputFocus"
+      },
+      {
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "command": "emojisense.togglePickerDescriptionSearch",
+        "when": "emojisense.pickerOpen && inQuickInput && quickInputType == 'quickPick' && inputFocus"
       }
     ],
     "configuration": {
@@ -136,11 +167,6 @@
         "emojisense.picker.ignoreSpaces": {
           "type": "boolean",
           "markdownDescription": "Ignore literal space characters when matching picker input, so `s mile` matches `smile` while the typed spaces remain visible. Tabs and other whitespace characters are not ignored.",
-          "default": true
-        },
-        "emojisense.picker.searchDescriptions": {
-          "type": "boolean",
-          "markdownDescription": "Show and search human-readable emoji descriptions and #tags in both pickers, such as `grinning face with big eyes · #happy #joy #haha`. Shortcode matching remains enabled.",
           "default": true
         },
         "emojisense.picker.preferExactMatch": {
@@ -213,6 +239,26 @@
               }
             ]
           }
+        },
+        "emojisense.picker.description.search": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Search human-readable emoji descriptions and #tags in both pickers, independently of their display. Emoji and shortcode matching remains enabled. Toggle for the current picker with the search button or Cmd+Shift+D (macOS) / Ctrl+Shift+D (Windows/Linux)."
+        },
+        "emojisense.picker.description.display": {
+          "type": "string",
+          "enum": [
+            "no",
+            "description",
+            "detail"
+          ],
+          "default": "description",
+          "enumDescriptions": [
+            "Hide descriptions and tags.",
+            "Show descriptions and tags beside the shortcode.",
+            "Show descriptions and tags below the shortcode."
+          ],
+          "markdownDescription": "Where to display human-readable emoji descriptions and #tags in both pickers, independently of searching. Cycle no → description → detail with the display button or Shift+Tab in the search input. Changes apply only to the current picker."
         }
       }
     }
