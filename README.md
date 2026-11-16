@@ -1,6 +1,6 @@
 # :emojisense:
 
-Adds suggestions and autocomplete for emoji to VS Code.
+Adds suggestions, autocomplete and a picker for emojis to VS Code.
 
 ![Example](https://raw.githubusercontent.com/mattbierner/vscode-emojisense/master/media/example.gif)
 
@@ -13,23 +13,22 @@ Inspired by the [Atom autocomplete+ emojis suggestions plugin][atom].
 - :gear: Enable and control **emoji completion settings** per language
 - :eyes: See **emoji previews** of `:smile:` style markup inline
 - :memo: Can be enabled in VS Code's SCM (git) input box.
-- :mag: Provide an **emoji picker** to select and insert an emoji in the editor or terminal.
-  - To access the picker, run the `Emojisense: Pick an emoji` command, or use the default keybindings:
-    - Mac: <kbd>cmd</kbd> + <kbd>i</kbd>
-    - Linux: <kbd>ctrl</kbd> + <kbd>alt</kbd> + <kbd>i</kbd>
-    - Windows: <kbd>ctrl</kbd> + <kbd>i</kbd>
-  - To access the **emoji-code picker** and insert `:emoji:` markup in the editor or terminal, run the `Emojisense: Pick an :emoji:` command, or use the default keybindings:
-    - Mac: <kbd>shift</kbd> + <kbd>cmd</kbd> + <kbd>i</kbd>
-    - Linux: <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>alt</kbd> + <kbd>i</kbd>
-    - Windows: <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>i</kbd>
-  - :currency_exchange: Switch emoji / `:shortcode:` insertion with <kbd>Tab</kbd> or the insertion-mode button.
-  - :control_knobs: Cycle description display with <kbd>Shift</kbd> + <kbd>Tab</kbd> or the display button.
-  - :mag: Toggle description and tag search with <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> or the search button.
+- :mag: Provide a **global emoji picker** to select and insert an emoji in the editor or terminal, with shared history.
+  - Access the picker by running the `Emojisense: Pick an emoji` command, or use the default keybindings:
+    - Mac: <kbd>Cmd</kbd> + <kbd>i</kbd>
+    - Linux: <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>i</kbd>
+    - Windows: <kbd>Ctrl</kbd> + <kbd>i</kbd>
+  - Access the **emoji-code picker** and insert `:emoji:` markup in the editor or terminal by running the `Emojisense: Pick an :emoji:` command, or use the default keybindings:
+    - Mac: <kbd>Shift</kbd> + <kbd>Cmd</kbd> + <kbd>i</kbd>
+    - Linux: <kbd>Shift</kbd> + <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>i</kbd>
+    - Windows: <kbd>Shift</kbd> + <kbd>Ctrl</kbd> + <kbd>i</kbd>
+  - :currency_exchange: Switch emoji / `:shortcode:` insertion with <kbd>Tab ⇥</kbd> or the insertion-mode button.
+  - :control_knobs: Cycle description display with <kbd>Shift</kbd> + <kbd>Tab ⇥</kbd> or the display button.
+  - :open_book: Toggle description and tag search with <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> or the search button.
 
     These three shortcuts apply while the search input is focused; changes last for the current picker session.
 
-  - :clipboard: Copy the highlighted emoji or shortcode with <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>C</kbd>, or an item's copy button. A brief checkmark confirms copying; the picker stays open.
-  - :scroll: Both pickers share the last **200 insertions**, most recent first, across editors, terminals, workspaces, and restarts.
+  - :clipboard: Copy the highlighted emoji or shortcode with <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>C</kbd>, or an item's copy button.
 
 :open_book: [List of supported emoji][cheat]
 
@@ -47,15 +46,15 @@ Inspired by the [Atom autocomplete+ emojis suggestions plugin][atom].
 
 ## Picker Configuration
 
-- `emojisense.picker.ignoreSpaces`: Ignore literal space characters when matching in either picker (for example, `s mile` matches `smile`), while preserving the text you type. Enabled by default. Tabs and other whitespace characters are not ignored. Set this to `false` to use native filtering alone. Native matches keep their highlighting; additional matches found by ignoring spaces may have no blue highlighting.
-
 - `emojisense.picker.description.search`: Search human-readable descriptions and #tags independently of their display. Enabled by default. Type `#happy` to match tags or `happy` for a broader search. Combine tags and text in either order (`#happy face` or `face #happy`); all tag terms and the text must match. The search button or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> (macOS) / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> (Windows/Linux) toggles matching for the current picker. Emoji and shortcode matching remains enabled. Additional custom matches, including hidden descriptions, may have no blue highlighting.
 
-- `emojisense.picker.description.display`: Display descriptions and tags beside the shortcode (`"description"`, default), below it (`"detail"`), or hide them (`"no"`). Inline text uses a visible separator: `:smiley: · grinning face with big eyes · #happy #joy #haha`. The display button or <kbd>Shift</kbd>+<kbd>Tab</kbd> in the search input cycles `no → description → detail → no` for the current picker. Display changes do not affect searching; both settings determine the defaults when reopening.
+- `emojisense.picker.description.display`: Display descriptions and tags beside the shortcode (`"description"`, default), below it (`"detail"`), or hide them (`"no"`). Inline text uses a visible separator: `:smiley:   · grinning face with big eyes · #happy #joy #haha`. The display button or <kbd>Shift</kbd>+<kbd>Tab ⇥</kbd> in the search input cycles `no → description → detail → no` for the current picker. Display changes do not affect searching; both settings determine the defaults when reopening.
 
 - `emojisense.picker.preferExactMatch`: Prefer exact shortcode matches and automatically focus them in the emoji picker, so <kbd>Enter</kbd> selects them. Enabled by default. Names are matched without case sensitivity, with or without surrounding colons (for example, `smile` or `:smile:`). Other fuzzy matches remain available, and you can use the arrow keys to select another result.
 
 - `emojisense.picker.preferPrefixMatch`: Prefer shortcode prefixes ahead of other fuzzy matches when preparing results. Enabled by default. For example, the extension prioritizes `smile`, then `smile_cat`, then fuzzy matches such as `sweat_smile`; native sorting of shortcode labels can change their visible order. Set both match preferences to `false` to disable extension prioritization. Native VS Code sorting still applies to shortcode labels. Set `ignoreSpaces` to `false` too to disable space-insensitive matching. Shared recent history still appears first.
+
+- `emojisense.picker.ignoreSpaces`: Ignore literal space characters when matching in either picker (for example, `s mile` matches `smile`), while preserving the text you type. Enabled by default. Tabs and other whitespace characters are not ignored. Set this to `false` to disable space-insensitive matching. Native matches keep their highlighting; additional matches found by ignoring spaces may have no blue highlighting.
 
 ## Per Language Configuration
 
