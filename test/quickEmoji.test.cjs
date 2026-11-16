@@ -210,7 +210,7 @@ test('tags are appended to readable descriptions for native hashtag filtering', 
         name: 'smiley', emoji: '😃', description: 'grinning face with big eyes', tags: ['happy', 'joy', 'haha'],
     }] });
     const item = session.picker.items[0];
-    assert.equal(item.description, '· grinning face with big eyes · #happy #joy #haha');
+    assert.equal(item.description, '  ·    grinning face with big eyes · #happy #joy #haha');
     assert.equal(item.label, ':smiley:');
     assert.equal(item.detail, undefined);
     assert.equal(item.tooltip, undefined);
@@ -221,7 +221,7 @@ test('tags are appended to readable descriptions for native hashtag filtering', 
     assert.equal(session.picker.items, originalItems);
     assert.equal(session.picker.title, '😃 Emoji Picker');
     assert.equal(session.picker.buttons.length, 3);
-    assert.equal(item.description, '· grinning face with big eyes · #happy #joy #haha');
+    assert.equal(item.description, '  ·    grinning face with big eyes · #happy #joy #haha');
     session.change('#');
     assert.equal(session.picker.items, originalItems); // No tag chooser or custom tag filtering.
     await session.cancel();
@@ -543,7 +543,7 @@ test('description search defaults to enabled with shortcodes, descriptions, and 
     assert.equal(smile.label, ':smile:');
     assert.equal(smile.detail, undefined);
     assert.equal(smile.tooltip, undefined);
-    assert.equal(smile.description, '· grinning face with smiling eyes');
+    assert.equal(smile.description, '  ·    grinning face with smiling eyes');
 });
 
 for (const property of ['emoji', 'name']) {
@@ -568,7 +568,7 @@ test('description search works independently of exact and prefix preferences', a
     t.after(() => session.cancel());
     assert.equal(session.picker.matchOnDetail, false);
     assert.equal(session.hasChangeHandler, true);
-    assert.deepEqual(session.picker.items.map(item => item.description), emojis.map(emoji => `· ${emoji.description}`));
+    assert.deepEqual(session.picker.items.map(item => item.description), emojis.map(emoji => `  ·    ${emoji.description}`));
 });
 
 test('description queries preserve whitespace when space ignoring is disabled', async t => {
@@ -669,7 +669,7 @@ test('description text and input stay readable when spaces are ignored', async t
     session.change('grinning face with smiling eyes');
     assert.equal(session.picker.value, 'grinning face with smiling eyes');
     assert.equal(session.picker.matchOnDetail, false);
-    assert.equal(session.picker.items.find(item => item.emoji.name === 'smile').description, '· grinning face with smiling eyes');
+    assert.equal(session.picker.items.find(item => item.emoji.name === 'smile').description, '  ·    grinning face with smiling eyes');
 });
 
 for (const searchDescriptions of [true, false]) {
@@ -850,7 +850,7 @@ test('history remains shared when both match preferences are disabled', async t 
     assert.equal(session.names[0], 'cat');
     assert.equal(session.hasChangeHandler, true);
     assert.equal(session.picker.items[0].label, 'cat');
-    assert.equal(session.picker.items[0].description, '· cat face');
+    assert.equal(session.picker.items[0].description, '  ·    cat face');
 });
 
 test('history is bounded, ignores removed shortcodes, and does not duplicate candidates', async () => {
@@ -992,7 +992,7 @@ for (const property of ['emoji', 'name']) {
                 t.after(() => session.cancel());
                 const item = session.picker.items.find(item => item.emoji.name === 'smiley');
                 assert.equal(item.description, display === 'description'
-                    ? '· grinning face with big eyes · #happy #joy' : undefined);
+                    ? '  ·    grinning face with big eyes · #happy #joy' : undefined);
                 assert.equal(item.detail, display === 'detail' ? 'grinning face with big eyes · #happy #joy' : undefined);
                 for (const query of ['grinning', '#happy', '#happy face', 'face #happy', '#joy #happy']) {
                     session.change(query);
@@ -1026,7 +1026,7 @@ for (const property of ['emoji', 'name']) {
                 assert.equal(session.picker.value, 'smil');
                 assert.equal(session.picker.activeItems[0], active);
                 assert.equal(active.description, display === 'description'
-                    ? '· grinning face with big eyes · #happy #joy' : undefined);
+                    ? '  ·    grinning face with big eyes · #happy #joy' : undefined);
                 assert.equal(active.detail, display === 'detail' ? 'grinning face with big eyes · #happy #joy' : undefined);
                 assert.equal(session.picker.buttons[0].iconPath.id, 'list-selection');
                 assert(session.picker.buttons[0].tooltip.includes(`Description display: ${display}.`));
@@ -1076,7 +1076,7 @@ test('both description controls are session-local, with no legacy fallback', asy
     await first.cancel();
     const next = openPicker({ settings });
     t.after(() => next.cancel());
-    assert.equal(next.picker.items[0].description, '· grinning face with sweat');
+    assert.equal(next.picker.items[0].description, '  ·    grinning face with sweat');
     assert.equal(next.picker.items[0].detail, undefined);
     assert(next.picker.buttons[1].tooltip.includes('search: on'));
     assert.deepEqual(settings, { 'picker.searchDescriptions': false });
@@ -1142,7 +1142,7 @@ for (const display of ['no', 'description', 'detail']) {
             t.after(() => session.cancel());
             const item = session.picker.items.find(item => item.emoji.name === 'smiley');
             assert.equal(item.label, ':smiley:');
-            assert.equal(item.description, display === 'description' ? '· grinning face with big eyes · #happy #joy' : undefined);
+            assert.equal(item.description, display === 'description' ? '  ·    grinning face with big eyes · #happy #joy' : undefined);
             assert.equal(item.detail, display === 'detail' ? 'grinning face with big eyes · #happy #joy' : undefined);
             assert(item.iconPath);
             for (const query of ['grinning', '#happy', '#happy face', 'face #happy']) {

@@ -53,7 +53,7 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
             const ignoreSpaces = config.get<boolean>('picker.ignoreSpaces', true);
             const shortcodeFor = (emoji: Emoji) => preferExactMatch || preferPrefixMatch ? `:${emoji.name}:` : emoji.name;
             const itemDescriptionFor = (emoji: Emoji) => descriptionDisplay === 'description'
-                ? `· ${descriptionFor(emoji)}` : undefined;
+                ? `  ·    ${descriptionFor(emoji)}` : undefined;
             const recent = new Set(recentItems());
             const orderedItems = recent.size
                 ? [...recent, ...items.filter(item => !recent.has(item))]
