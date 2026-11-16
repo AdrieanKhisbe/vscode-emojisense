@@ -22,10 +22,14 @@ Inspired by the [Atom autocomplete+ emojis suggestions plugin][atom].
     - Mac: <kbd>shift</kbd> + <kbd>cmd</kbd> + <kbd>i</kbd>
     - Linux: <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>i</kbd> in the editor; add <kbd>alt</kbd> in the terminal
     - Windows: <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>i</kbd>
-  - :currency_exchange: While the picker is open, use its insertion-mode button to switch between emoji and `:shortcode:` output, or press <kbd>shift</kbd> + <kbd>cmd</kbd> + <kbd>i</kbd> on macOS, <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>alt</kbd> + <kbd>i</kbd> on Linux, or <kbd>shift</kbd> + <kbd>ctrl</kbd> + <kbd>i</kbd> on Windows. The title shows the current mode. Switching preserves your search and selection, and each opening starts in the mode of the command you used.
-  - :clipboard: Copy the highlighted item using <kbd>cmd</kbd> + <kbd>c</kbd> on macOS or <kbd>ctrl</kbd> + <kbd>c</kbd> on Windows/Linux, or click an item's copy button to copy that item. This copies emoji or `:shortcode:` according to the current insertion mode, keeps the picker open, and leaves insertion history unchanged. In this picker, the shortcut copies the highlighted item rather than selected search text.
-  - :white_check_mark: Successful copying briefly changes that item's copy icon to a checkmark, with a tooltip showing what was copied. The copy icon returns after one second. Clipboard failures show a warning so you can retry.
-  - :scroll: The emoji and shortcode pickers share the last 200 successfully inserted shortcodes, most recent first, across editors, terminals, and workspaces. History persists across restarts in the current VS Code profile. Exact and prefix preferences take priority while searching; clearing the search restores recent history order. A history storage failure does not interrupt insertion.
+  - :currency_exchange: Switch emoji / `:shortcode:` insertion with <kbd>Tab</kbd> or the insertion-mode button.
+  - :control_knobs: Cycle description display with <kbd>Shift</kbd> + <kbd>Tab</kbd> or the display button.
+  - :mag: Toggle description and tag search with <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> or the search button.
+
+    These three shortcuts apply while the search input is focused; changes last for the current picker session.
+
+  - :clipboard: Copy the highlighted emoji or shortcode with <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>C</kbd>, or an item's copy button. A brief checkmark confirms copying; the picker stays open.
+  - :scroll: Both pickers share the last **200 insertions**, most recent first, across editors, terminals, workspaces, and restarts.
 
 :open_book: [List of supported emoji][cheat]
 
@@ -47,11 +51,11 @@ Inspired by the [Atom autocomplete+ emojis suggestions plugin][atom].
 
 - `emojisense.picker.description.search`: Search human-readable descriptions and #tags independently of their display. Enabled by default. Type `#happy` to match tags or `happy` for a broader search. Combine tags and text in either order (`#happy face` or `face #happy`); all tag terms and the text must match. The search button or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> (macOS) / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> (Windows/Linux) toggles matching for the current picker. Emoji and shortcode matching remains enabled. Additional custom matches, including hidden descriptions, may have no blue highlighting.
 
-- `emojisense.picker.description.display`: Display descriptions and tags beside the shortcode (`"description"`, default), below it (`"detail"`), or hide them (`"no"`). Inline text uses a visible separator: `:smiley: · grinning face with big eyes · #happy #joy #haha`. The display button or <kbd>Shift</kbd>+<kbd>Tab</kbd> in the search input cycles `no → description → detail → no` for the current picker. <kbd>Tab</kbd> keeps normal navigation. Display changes do not affect searching; both settings determine the defaults when reopening.
+- `emojisense.picker.description.display`: Display descriptions and tags beside the shortcode (`"description"`, default), below it (`"detail"`), or hide them (`"no"`). Inline text uses a visible separator: `:smiley: · grinning face with big eyes · #happy #joy #haha`. The display button or <kbd>Shift</kbd>+<kbd>Tab</kbd> in the search input cycles `no → description → detail → no` for the current picker. Display changes do not affect searching; both settings determine the defaults when reopening.
 
-- `emojisense.picker.preferExactMatch`: Rank exact shortcode matches first and automatically focus them in the emoji picker, so <kbd>Enter</kbd> selects them. Enabled by default. Names are matched without case sensitivity, with or without surrounding colons (for example, `smile` or `:smile:`). Other fuzzy matches remain available, and you can use the arrow keys to select another result.
+- `emojisense.picker.preferExactMatch`: Prefer exact shortcode matches and automatically focus them in the emoji picker, so <kbd>Enter</kbd> selects them. Enabled by default. Names are matched without case sensitivity, with or without surrounding colons (for example, `smile` or `:smile:`). Other fuzzy matches remain available, and you can use the arrow keys to select another result.
 
-- `emojisense.picker.preferPrefixMatch`: Rank shortcode prefixes ahead of other fuzzy matches. Enabled by default. For example, `smile` ranks the single exact match `smile` first, then `smile_cat`, then fuzzy matches such as `sweat_smile`. Set both match preferences to `false` to disable prioritization. Set `ignoreSpaces` to `false` too to disable space-insensitive matching. Shared recent history still appears first.
+- `emojisense.picker.preferPrefixMatch`: Prefer shortcode prefixes ahead of other fuzzy matches when preparing results. Enabled by default. For example, the extension prioritizes `smile`, then `smile_cat`, then fuzzy matches such as `sweat_smile`; native sorting of shortcode labels can change their visible order. Set both match preferences to `false` to disable extension prioritization. Native VS Code sorting still applies to shortcode labels. Set `ignoreSpaces` to `false` too to disable space-insensitive matching. Shared recent history still appears first.
 
 ## Per Language Configuration
 

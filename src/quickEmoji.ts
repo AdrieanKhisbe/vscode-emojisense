@@ -1,5 +1,6 @@
-import { commands, Disposable, env, Memento, QuickPickItem, ThemeIcon, window, workspace } from 'vscode';
+import { commands, Disposable, env, Memento, QuickPickItem, ThemeIcon, Uri, version, window, workspace } from 'vscode';
 import { Emoji, EmojiProvider } from './emoji';
+import { createEmojiIconProvider } from './pickerIcons';
 import { matchesPickerQuery } from './pickerMatching';
 
 export type EmojiDestination = 'terminal' | 'editor';
@@ -7,6 +8,8 @@ type DescriptionDisplay = 'no' | 'description' | 'detail';
 
 interface EmojiQuickPickItem extends QuickPickItem {
     readonly emoji: Emoji;
+    // Stable since VS Code 1.81. Older hosts use the original text-only layout.
+    readonly iconPath?: Uri;
 }
 
 const historyKey = 'picker.history';
@@ -17,6 +20,9 @@ const descriptionFor = (emoji: Emoji) => emoji.tags.length
     : emoji.description;
 
 export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
+    const [major, minor] = version.split('.').map(Number);
+    const useEmojiIcons = major > 1 || major === 1 && minor >= 81;
+    const iconFor = createEmojiIconProvider();
     const items: EmojiQuickPickItem[] = provider.emojis.map((emoji) => {
         return ({ description: emoji.name, label: emoji.emoji, emoji });
     });
@@ -51,7 +57,8 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
             const ignoreSpaces = config.get<boolean>('picker.ignoreSpaces', true);
             const shortcodeFor = (emoji: Emoji) => preferExactMatch || preferPrefixMatch ? `:${emoji.name}:` : emoji.name;
             const itemDescriptionFor = (emoji: Emoji) => descriptionDisplay === 'description'
-                ? `${shortcodeFor(emoji)} · ${descriptionFor(emoji)}` : shortcodeFor(emoji);
+                ? `${useEmojiIcons ? '' : `${shortcodeFor(emoji)} `}· ${descriptionFor(emoji)}`
+                : useEmojiIcons ? undefined : shortcodeFor(emoji);
             const recent = new Set(recentItems());
             const orderedItems = recent.size
                 ? [...recent, ...items.filter(item => !recent.has(item))]
@@ -65,6 +72,8 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                     const copy = { iconPath: new ThemeIcon('copy'), tooltip: 'Copy in current insertion mode' };
                     const rankedItems: EmojiQuickPickItem[] = orderedItems.map(item => ({
                         ...item,
+                        label: useEmojiIcons ? shortcodeFor(item.emoji) : item.label,
+                        iconPath: useEmojiIcons ? iconFor(item.emoji.emoji) : undefined,
                         description: itemDescriptionFor(item.emoji),
                         detail: descriptionDisplay === 'detail' ? descriptionFor(item.emoji) : undefined,
                         buttons: [copy],
@@ -97,18 +106,21 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         const needsFallback = ignoreSpaces && normalized !== value;
                         const { tags, text: query } = queryParts(value);
                         const combined = tags.length > 0 && (query.trim().length > 0 || tags.length > 1);
-                        // Native filtering only sees displayed fields. Supply semantic matches
-                        // when searchable text is hidden or shares a field with excluded text.
+                        // Images aren't searchable. Retain pasted emoji and keycap searches
+                        // alongside hidden description and space-insensitive matching.
+                        const glyphQuery = useEmojiIcons && query.length > 0 && !/[a-z]/i.test(query);
                         const customSearch = descriptionDisplay === 'no' && searchDescriptions
-                            || descriptionDisplay === 'description' && !searchDescriptions;
+                            || !useEmojiIcons && descriptionDisplay === 'description' && !searchDescriptions;
                         let changed = false;
                         for (const item of rankedItems) {
                             const fields = [item.emoji.emoji, shortcodeFor(item.emoji),
                                 searchDescriptions ? descriptionFor(item.emoji) : ''];
+                            const glyphMatch = glyphQuery && (query.includes('*')
+                                ? matchesPickerQuery(query, item.emoji.emoji) : item.emoji.emoji.includes(query));
                             const alwaysShow = combined || customSearch && tags.length > 0
                                 ? matchesTags(item, tags)
                                     && fields.some(text => matchesPickerQuery(query, text))
-                                : (needsFallback || customSearch) && fields.some(text => matchesPickerQuery(query, text));
+                                : glyphMatch || (needsFallback || customSearch) && fields.some(text => matchesPickerQuery(query, text));
                             if (!!item.alwaysShow !== alwaysShow) {
                                 item.alwaysShow = alwaysShow;
                                 changed = true;
@@ -119,14 +131,16 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                     picker.placeholder = 'Your Emoji Code';
                     const cycleDescriptionDisplay = { iconPath: new ThemeIcon('list-selection'), tooltip: '' };
                     const toggleDescriptionSearch = { iconPath: new ThemeIcon('book'), tooltip: '' };
-                    const useShortcode = { iconPath: new ThemeIcon('symbol-key'), tooltip: 'Insert :shortcode: instead' };
-                    const useEmoji = { iconPath: new ThemeIcon('smiley'), tooltip: 'Insert emoji instead' };
+                    const useShortcode = { iconPath: new ThemeIcon('symbol-key'), tooltip: 'Insert :shortcode: instead (Tab)' };
+                    const useEmoji = { iconPath: new ThemeIcon('smiley'), tooltip: 'Insert emoji instead (Tab)' };
                     const updateControls = () => {
-                        picker.matchOnDescription = descriptionDisplay !== 'description' || searchDescriptions;
+                        picker.matchOnDescription = useEmojiIcons
+                            ? descriptionDisplay === 'description' && searchDescriptions
+                            : descriptionDisplay !== 'description' || searchDescriptions;
                         picker.matchOnDetail = descriptionDisplay === 'detail' && searchDescriptions;
                         const nextDisplay = descriptionDisplay === 'no' ? 'description' : descriptionDisplay === 'description' ? 'detail' : 'no';
                         cycleDescriptionDisplay.tooltip = `Description display: ${descriptionDisplay}. Switch to ${nextDisplay} (Shift+Tab)`;
-                        toggleDescriptionSearch.tooltip = `Description and tag search: ${searchDescriptions ? 'on' : 'off'}. Click to ${searchDescriptions ? 'disable' : 'enable'}`;
+                        toggleDescriptionSearch.tooltip = `Description and tag search: ${searchDescriptions ? 'on' : 'off'}. Click to ${searchDescriptions ? 'disable' : 'enable'} (Cmd/Ctrl+Shift+D)`;
                         picker.title = insertionProperty === 'emoji' ? '😃 Emoji Picker' : ':smiley: Emoji Code Picker';
                         picker.buttons = [
                             cycleDescriptionDisplay,
@@ -210,7 +224,7 @@ export const quickEmoji = (provider: EmojiProvider, historyState: Memento) => {
                         }
 
                         // EmojiProvider has one item per shortcode, so at most one is exact.
-                        // Reorder the full list; let VS Code keep filtering fuzzy matches.
+                        // VS Code filters fuzzy matches and may further sort shortcode labels.
                         const nextItems = exactMatch
                             ? [exactMatch, ...prefixMatches, ...otherItems]
                             : [...prefixMatches, ...otherItems];

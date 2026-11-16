@@ -159,6 +159,11 @@
         "mac": "cmd+shift+d",
         "command": "emojisense.togglePickerDescriptionSearch",
         "when": "emojisense.pickerOpen && inQuickInput && quickInputType == 'quickPick' && inputFocus"
+      },
+      {
+        "key": "tab",
+        "command": "emojisense.togglePickerInsertionMode",
+        "when": "emojisense.pickerOpen && inQuickInput && quickInputType == 'quickPick' && inputFocus"
       }
     ],
     "configuration": {
@@ -171,12 +176,12 @@
         },
         "emojisense.picker.preferExactMatch": {
           "type": "boolean",
-          "markdownDescription": "Rank exact emoji shortcode matches first and automatically focus them in the picker. Accepts names with or without surrounding colons, such as `smile` or `:smile:`. Other fuzzy matches remain available.",
+          "markdownDescription": "Prefer exact emoji shortcode matches and automatically focus them in the picker. Accepts names with or without surrounding colons, such as `smile` or `:smile:`. Other fuzzy matches remain available. Native VS Code sorting of shortcode labels can influence the final visible order.",
           "default": true
         },
         "emojisense.picker.preferPrefixMatch": {
           "type": "boolean",
-          "markdownDescription": "Rank emoji shortcodes starting with the input ahead of other fuzzy matches in the picker. Exact matches take priority when preferExactMatch is enabled.",
+          "markdownDescription": "Prefer emoji shortcodes starting with the input ahead of other fuzzy matches in the supplied picker items. Exact matches take priority when preferExactMatch is enabled. Native VS Code sorting of shortcode labels can influence the final visible order.",
           "default": true
         },
         "emojisense.unicodeCompletionsEnabled": {
